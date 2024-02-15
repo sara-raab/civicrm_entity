@@ -10,8 +10,6 @@ use Drupal\Core\Field\FieldTypePluginManagerInterface;
 use Drupal\Core\Field\FormatterPluginManager;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
-use Drupal\Core\Render\BubbleableMetadata;
-use Drupal\Core\Render\Element;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\views\Plugin\views\display\DisplayPluginBase;
 use Drupal\views\ResultRow;
@@ -20,6 +18,8 @@ use Drupal\civicrm_entity\CiviCrmApiInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Render\BubbleableMetadata;
+use Drupal\Core\Render\Element;
 use Drupal\datetime\Plugin\Field\FieldType\DateTimeItem;
 use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 
@@ -88,7 +88,7 @@ class CustomEntityField extends EntityField {
     if ($settings = $field_definition->getSetting('civicrm_entity_field_metadata')) {
       $this->fieldMetadata = $settings;
 
-      if ($this->fieldMetadata['is_multiple']) {
+      if ($this->fieldMetadata['is_multiple'] || (isset($this->fieldMetadata['serialize']) && $this->fieldMetadata['serialize'])) {
         $this->fieldDefinition->setCardinality($this->fieldMetadata['max_multiple']);
       }
     }
@@ -248,6 +248,10 @@ class CustomEntityField extends EntityField {
         }, ARRAY_FILTER_USE_KEY);
 
         if (!empty($result)) {
+          if (is_array($result[0])) {
+            $result = reset($result);
+          }
+
           $this->customValues = $result;
           $field_definition = $this->getFieldDefinition();
 
@@ -284,8 +288,10 @@ class CustomEntityField extends EntityField {
 
     switch ($definition->getType()) {
       case 'datetime':
-        $datetime_format = $definition->getSetting('datetime_type') === DateTimeItem::DATETIME_TYPE_DATE ? DateTimeItemInterface::DATE_STORAGE_FORMAT : DateTimeItemInterface::DATETIME_STORAGE_FORMAT;
-        return (new \DateTime($value, new \DateTimeZone(date_default_timezone_get())))->setTimezone(new \DateTimeZone('UTC'))->format($datetime_format);
+        if (!empty($value)) {
+          $datetime_format = $definition->getSetting('datetime_type') === DateTimeItem::DATETIME_TYPE_DATE ? DateTimeItemInterface::DATE_STORAGE_FORMAT : DateTimeItemInterface::DATETIME_STORAGE_FORMAT;
+          return (new \DateTime($value, new \DateTimeZone(date_default_timezone_get())))->setTimezone(new \DateTimeZone('UTC'))->format($datetime_format);
+        }
     }
 
     return $value;

@@ -36,9 +36,23 @@ class FieldDefinitionProvider implements FieldDefinitionProviderInterface {
               $field = BaseFieldDefinition::create('entity_reference')
                 ->setSetting('target_type', $foreign_key_dao::getTableName())
                 ->setSetting('handler', 'default');
+              if (!empty($civicrm_field['pseudoconstant'])) {
+                $field->setSetting('allowed_values_function', 'civicrm_entity_pseudoconstant_options');
+              }
             }
             else {
               $field = $this->getIntegerDefinition($civicrm_field);
+            }
+          }
+          elseif (isset($civicrm_field['data_type']) && $civicrm_field['data_type'] === 'ContactReference') {
+            $field = BaseFieldDefinition::create('entity_reference')
+              ->setSetting('target_type', 'civicrm_contact')
+              ->setSetting('handler', 'default');
+
+            if (isset($civicrm_field['serialize']) && $civicrm_field['serialize']) {
+              $field
+                ->setCardinality(FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED)
+                ->setCustomStorage(TRUE);
             }
           }
           else {
